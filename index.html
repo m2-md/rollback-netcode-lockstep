@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rollback Netcode &amp; Deterministik Lockstep</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #0e1116;
+        color: #d7dde5;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      h1 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      p.sub {
+        margin: 0 0 20px;
+        color: #8b97a8;
+        font-size: 13px;
+      }
+      .panels {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .panel h2 {
+        font-size: 13px;
+        font-weight: 500;
+        margin: 0 0 6px;
+        color: #8b97a8;
+      }
+      canvas {
+        background: #171c24;
+        border: 1px solid #2a3240;
+        border-radius: 6px;
+        display: block;
+      }
+      .controls {
+        margin: 20px 0 12px;
+        font-size: 13px;
+      }
+      pre#hud {
+        margin: 0;
+        padding: 12px 14px;
+        background: #171c24;
+        border: 1px solid #2a3240;
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.6;
+        display: inline-block;
+        min-width: 420px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>İki tahta, tek oyun</h1>
+    <p class="sub">
+      İki istemci aynı sayfada, aralarında 150 ms gecikmeli simüle kanal. Konum
+      paketi yok, sadece girdi.
+    </p>
+
+    <div class="panels">
+      <div class="panel">
+        <h2>P1 — ok tuşları</h2>
+        <canvas id="p1" width="320" height="240"></canvas>
+      </div>
+      <div class="panel">
+        <h2>P2 — WASD</h2>
+        <canvas id="p2" width="320" height="240"></canvas>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label>
+        <input type="checkbox" id="rollback" checked />
+        rollback (tahmin) açık — kapatınca saf lockstep
+      </label>
+    </div>
+
+    <pre id="hud">yükleniyor…</pre>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
