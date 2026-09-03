@@ -4,6 +4,8 @@
 **▶ [Live demo](https://m2-md.github.io/rollback-netcode-lockstep/)** · [Source](https://github.com/m2-md/rollback-netcode-lockstep)
 <!-- LINKS:END -->
 
+> Peer-to-peer deterministic rollback netcode simulation from scratch: state snapshots, speculative input prediction, rolling rollback frames, and fixed-point math.
+
 Working code for the article "Two Boards, One Game: Rollback Netcode and
 Deterministic Lockstep from Scratch". No server, no authority. Two clients run the
 same deterministic simulation and **only inputs** travel between them; when the
@@ -132,6 +134,12 @@ src/main.ts           demo loop: two sessions, two canvases, HUD
 src/bench-cli.ts      rollback cost / latency table + save/load/step ns
 test/                 26 tests (vitest, DOM-free)
 ```
+
+## Tech stack
+
+- TypeScript, Vite, Vitest, npm.
+- No external runtime dependencies. No server, no WebRTC/WebSocket — the network is
+  simulated in-page by a fixed-latency channel.
 
 ## License
 
