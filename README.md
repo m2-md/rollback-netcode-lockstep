@@ -1,5 +1,9 @@
 # Rollback Netcode & Deterministic Lockstep
 
+<!-- LINKS:BEGIN — üretildi: scripts/sync-repo-links.py · elle düzenleme -->
+**▶ [Live demo](https://m2-md.github.io/rollback-netcode-lockstep/)** · [Source](https://github.com/m2-md/rollback-netcode-lockstep)
+<!-- LINKS:END -->
+
 Working code for the article "Two Boards, One Game: Rollback Netcode and
 Deterministic Lockstep from Scratch". No server, no authority. Two clients run the
 same deterministic simulation and **only inputs** travel between them; when the
