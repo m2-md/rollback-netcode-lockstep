@@ -14,7 +14,7 @@ import {
 
 type Script = (frame: number) => number;
 
-// Ağsız referans: her girdi zamanında bilinseydi ne olurdu?
+// Headless reference: what if every input were known in time?
 function reference(
   scripts: [Script, Script],
   frames: number,
@@ -29,7 +29,7 @@ function reference(
   return s;
 }
 
-// İki oturum, aralarında delayFrames kare gecikmeli tel.
+// Two sessions connected over wire with delayFrames latency.
 function runPair(opts: {
   frames: number;
   delayFrames: number;
@@ -62,7 +62,7 @@ function runPair(opts: {
     b.advance();
   }
 
-  // Telde kalanları boşalt ve son geri sarmanın oturmasını bekle.
+  // Drain remaining messages and wait for final rollback to settle.
   for (const p of wire) if (p.at >= opts.frames) p.to.receive(p.msg);
   a.advance();
   b.advance();
@@ -78,7 +78,7 @@ const scripts: [Script, Script] = [
 ];
 
 // rollback
-it("rollback+replay sonucu, hiç yanılmamış referansla BİREBİR aynı", () => {
+it("rollback+replay result matches non-speculative reference EXACTLY", () => {
   const { a } = runPair({
     frames: FRAMES,
     delayFrames: DELAY,
@@ -88,10 +88,10 @@ it("rollback+replay sonucu, hiç yanılmamış referansla BİREBİR aynı", () =
   const ref = reference(scripts, a.frame, 2);
   expect(a.state).toEqual(ref);
   expect(hashState(a.state)).toBe(hashState(ref));
-  expect(a.rollbackCount).toBeGreaterThan(0); // gerçekten geri sarmış
+  expect(a.rollbackCount).toBeGreaterThan(0); // verified rollback occurred
 });
 
-it("iki taraf aynı kareye ve aynı hash'e varır (desync yok)", () => {
+it("both sides arrive at the same frame and hash (no desync)", () => {
   const { a, b } = runPair({
     frames: FRAMES,
     delayFrames: DELAY,
@@ -102,11 +102,11 @@ it("iki taraf aynı kareye ve aynı hash'e varır (desync yok)", () => {
   expect(hashState(a.state)).toBe(hashState(b.state));
 });
 
-it("input delay ağ gecikmesini karşılarsa hiç geri sarma olmaz", () => {
+it("no rollback occurs if input delay covers network latency", () => {
   const { a, b } = runPair({
     frames: FRAMES,
     delayFrames: DELAY,
-    inputDelay: DELAY, // beklemeyi girdi gecikmesiyle ödedik
+    inputDelay: DELAY, // compensated waiting with input delay
     scripts,
   });
   expect(a.rollbackCount).toBe(0);
@@ -116,7 +116,7 @@ it("input delay ağ gecikmesini karşılarsa hiç geri sarma olmaz", () => {
   );
 });
 
-it("sabit girdide tahmin tutar, değişken girdide sık yanılır", () => {
+it("prediction succeeds on constant input, fails frequently on changing input", () => {
   const steady = runPair({
     frames: FRAMES,
     delayFrames: DELAY,
@@ -134,7 +134,7 @@ it("sabit girdide tahmin tutar, değişken girdide sık yanılır", () => {
   expect(jitter.a.rollbackCount).toBeGreaterThan(10);
 });
 
-it("yanlış tahmin EN ESKİ hatalı kareye geri sarar", () => {
+it("incorrect prediction rolls back to the OLDEST faulty frame", () => {
   const s = new RollbackSession(createInitialState(), {
     localPlayer: 0,
     inputDelay: 0,
@@ -147,11 +147,11 @@ it("yanlış tahmin EN ESKİ hatalı kareye geri sarar", () => {
     s.advance();
   }
   expect(s.frame).toBe(10);
-  expect(s.rollbackCount).toBe(0); // 5..9 arası "RIGHT devam" diye tahmin edildi
+  expect(s.rollbackCount).toBe(0); // 5..9 predicted as "continue RIGHT"
 
-  s.receive({ player: 1, frame: 5, input: RIGHT }); // tahmin tuttu
-  s.receive({ player: 1, frame: 6, input: RIGHT }); // tahmin tuttu
-  s.receive({ player: 1, frame: 7, input: LEFT }); // TAHMİN TUTMADI
+  s.receive({ player: 1, frame: 5, input: RIGHT }); // prediction correct
+  s.receive({ player: 1, frame: 6, input: RIGHT }); // prediction correct
+  s.receive({ player: 1, frame: 7, input: LEFT }); // PREDICTION MISMATCH
   s.receive({ player: 1, frame: 8, input: LEFT });
   s.addLocalInput(0);
   s.advance();
@@ -161,7 +161,7 @@ it("yanlış tahmin EN ESKİ hatalı kareye geri sarar", () => {
   expect(s.frame).toBe(11);
 });
 
-it("tahmin penceresi dolunca duraklar, ayrışmaz", () => {
+it("stalls when prediction window is full, does not diverge", () => {
   const s = new RollbackSession(createInitialState(), {
     localPlayer: 0,
     inputDelay: 0,
@@ -175,8 +175,8 @@ it("tahmin penceresi dolunca duraklar, ayrışmaz", () => {
   expect(s.stallCount).toBeGreaterThan(0);
 });
 
-// saf lockstep
-it("eksik girdide ilerlemez, girdi gelince ilerler", () => {
+// pure lockstep
+it("does not advance on missing input, advances when input arrives", () => {
   const s = new LockstepSession(createInitialState(), {
     localPlayer: 0,
     inputDelay: 0,
@@ -191,7 +191,7 @@ it("eksik girdide ilerlemez, girdi gelince ilerler", () => {
   expect(s.frame).toBe(1);
 });
 
-it("9 kare gecikmede lockstep zamanı ağır çekime düşürür", () => {
+it("lockstep slows time into heavy slow-motion under 9-frame delay", () => {
   const init = createInitialState();
   const a = new LockstepSession(init, { localPlayer: 0, inputDelay: 0 });
   const b = new LockstepSession(init, { localPlayer: 1, inputDelay: 0 });
@@ -207,7 +207,7 @@ it("9 kare gecikmede lockstep zamanı ağır çekime düşürür", () => {
     b.advance();
   }
 
-  expect(advanced).toBeLessThan(15); // 100 tick, 15'ten az kare
+  expect(advanced).toBeLessThan(15); // 100 ticks, fewer than 15 frames
   expect(a.stallCount).toBeGreaterThan(80);
   expect(a.frame).toBe(b.frame);
 });

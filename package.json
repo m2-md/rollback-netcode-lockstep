@@ -1,7 +1,7 @@
 {
   "name": "rollback-netcode-lockstep",
   "version": "1.0.0",
-  "description": "Sıfırdan rollback netcode ve deterministik lockstep: fixed-point simülasyon, girdi tamponu, state hash — sunucusuz, tek sayfada iki istemci",
+  "description": "Peer-to-peer deterministic rollback netcode simulation from scratch: state snapshots, speculative input prediction, rolling rollback frames, and fixed-point math.",
   "type": "module",
   "license": "MIT",
   "scripts": {

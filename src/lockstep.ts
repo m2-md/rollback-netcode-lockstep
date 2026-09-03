@@ -1,4 +1,4 @@
-// lockstep.ts — saf lockstep: herkesin girdisi gelmeden kare ilerlemez.
+// lockstep.ts — pure lockstep: frame does not advance until all inputs arrive.
 import { InputBuffer } from "./input-buffer";
 import { cloneState, step, type GameState } from "./sim";
 import type { InputMessage, SessionOptions } from "./rollback";
@@ -31,7 +31,7 @@ export class LockstepSession {
     this.buffers[msg.player].set(msg.frame, msg.input, true);
   }
 
-  // Tek fark bu satır: eksik girdi varsa bekle. Tahmin yok, geri sarma yok.
+  // Sole difference is this check: wait if input is missing. No prediction, no rollback.
   advance(): boolean {
     const f = this.state.frame;
     if (!this.buffers.every((b) => b.isConfirmed(f))) {

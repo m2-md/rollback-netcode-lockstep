@@ -1,4 +1,4 @@
-// sim.ts — deterministik simülasyon. Math.random / sin / cos / sqrt YOK.
+// sim.ts — deterministic simulation. No Math.random / sin / cos / sqrt.
 import {
   fpMul,
   fpDiv,
@@ -30,13 +30,13 @@ export const ARENA_W = fromInt(320);
 export const ARENA_H = fromInt(240);
 export const RADIUS = fromInt(12);
 
-const ACCEL = 22937; // ~0.35 px/kare²
+const ACCEL = 22937; // ~0.35 px/frame^2
 const FRICTION = 60293; // ~0.92
-const MAX_SPEED = 262144; // 4.0 px/kare
+const MAX_SPEED = 262144; // 4.0 px/frame
 const RESTITUTION = 45875; // ~0.7
 const SQRT1_2 = 46341; // 0.70710678 * 65536
 
-// Saf fonksiyon: aynı (state, inputs) → her zaman aynı çıktı, bit bit.
+// Pure function: identical (state, inputs) -> always identical output, bit for bit.
 export function step(state: GameState, inputs: number[]): GameState {
   const players = state.players.map((p, i) => integrate(p, inputs[i] ?? 0));
   for (let i = 0; i < players.length; i++) {
@@ -44,7 +44,7 @@ export function step(state: GameState, inputs: number[]): GameState {
       resolvePair(players[i], players[j]);
     }
   }
-  // Duvar en son konuşur: çarpışma itmesi kimseyi arenanın dışına atmasın.
+  // Wall has the final say: collision pushes must not eject anyone outside arena.
   for (const p of players) bounceWalls(p);
   return { frame: state.frame + 1, players };
 }
@@ -57,7 +57,7 @@ function integrate(p: Player, input: number): Player {
   if (input & UP) ay -= ONE;
   if (input & DOWN) ay += ONE;
   if (ax !== 0 && ay !== 0) {
-    // Çapraz harekette hız sabit kalsın. Math.SQRT1_2 değil, tamsayı sabiti.
+    // Maintain constant velocity during diagonal motion. Integer constant, not Math.SQRT1_2.
     ax = fpMul(ax, SQRT1_2);
     ay = fpMul(ay, SQRT1_2);
   }
@@ -89,7 +89,7 @@ function resolvePair(a: Player, b: Player): void {
   b.x += fpMul(nx, push);
   b.y += fpMul(ny, push);
 
-  // Eşit kütle: normal bileşenleri takas et (yaklaşıyorlarsa).
+  // Equal mass: swap normal components (if approaching).
   const va = fpMul(a.vx, nx) + fpMul(a.vy, ny);
   const vb = fpMul(b.vx, nx) + fpMul(b.vy, ny);
   if (va - vb <= 0) return;
@@ -134,12 +134,12 @@ export function cloneState(s: GameState): GameState {
   };
 }
 
-// Fixed-point durumu piksele çevirir. SADECE çizim için; simülasyon asla float görmez.
+// Converts fixed-point state to pixels. Drawing only; simulation never sees floats.
 export function toDraw(p: Player): { x: number; y: number; r: number } {
   return { x: toNumber(p.x), y: toNumber(p.y), r: toNumber(RADIUS) };
 }
 
-// FNV-1a, 32 bit. Simülasyon durumunun parmak izi.
+// FNV-1a, 32 bit. Fingerprint of the simulation state.
 export function hashState(s: GameState): number {
   let h = 0x811c9dc5;
   h = mixInt(h, s.frame);

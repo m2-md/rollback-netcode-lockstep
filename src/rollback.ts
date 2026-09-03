@@ -1,4 +1,4 @@
-// rollback.ts — tahmin et, yanılırsan geri sar.
+// rollback.ts — predict, roll back if mistaken.
 import { InputBuffer } from "./input-buffer";
 import { cloneState, step, type GameState } from "./sim";
 
@@ -43,8 +43,8 @@ export class RollbackSession {
     return this.state.frame;
   }
 
-  // Girdilerinin tamamı onaylanmış en son kare. Senkron kontrolü BURADA yapılır:
-  // spekülatif kareler iki tarafta farklı olabilir, onaylı kareler asla.
+  // Latest frame where all inputs are confirmed. Sync check runs HERE:
+  // speculative frame may differ between sides, confirmed frame never does.
   get confirmedFrame(): number {
     let f = this.state.frame;
     for (const b of this.buffers) f = Math.min(f, b.lastConfirmed + 1);
@@ -57,16 +57,16 @@ export class RollbackSession {
   }
 
   addLocalInput(input: number): InputMessage {
-    // Girdi ŞİMDİ değil, inputDelay kare SONRASI için planlanır.
+    // Schedule input for inputDelay frames in the FUTURE, not immediately.
     const frame = this.state.frame + this.inputDelay;
     this.buffers[this.localPlayer].set(frame, input, true);
     return { player: this.localPlayer, frame, input };
   }
 
-  // Uzak girdi geldi. Tahminimiz yanlışsa geri sarma borcu yazılır.
+  // Remote input arrived. If prediction was incorrect, record rollback target.
   receive(msg: InputMessage): void {
     const buf = this.buffers[msg.player];
-    if (buf.isConfirmed(msg.frame)) return; // yinelenen paket
+    if (buf.isConfirmed(msg.frame)) return; // duplicate packet
     const guessed = buf.has(msg.frame) ? buf.get(msg.frame) : null;
     buf.set(msg.frame, msg.input, true);
     if (
@@ -92,7 +92,7 @@ export class RollbackSession {
     return true;
   }
 
-  // Tahmin penceresi dolduysa duraklar (stall) — yoksa geri saramayız.
+  // Stall if prediction window is exhausted — otherwise cannot roll back.
   canAdvance(): boolean {
     if (!this.predictionEnabled) {
       return this.buffers.every((b) => b.isConfirmed(this.state.frame));
@@ -107,7 +107,7 @@ export class RollbackSession {
     const inputs = this.buffers.map((buf) => {
       if (buf.isConfirmed(f)) return buf.get(f);
       const guess = buf.predict(f);
-      buf.set(f, guess, false); // tahmini yaz ki neyi yanlış bildiğimizi bilelim
+      buf.set(f, guess, false); // record prediction so we know what was guessed
       return guess;
     });
     this.state = step(this.state, inputs);
@@ -117,7 +117,7 @@ export class RollbackSession {
     const target = this.pendingRollbackTo as number;
     this.pendingRollbackTo = null;
     const snapshot = this.saved.get(target);
-    if (!snapshot) return; // pencereden düşmüş: kurtarılamaz
+    if (!snapshot) return; // dropped out of window: unrecoverable
     const replayTo = this.state.frame;
     this.state = cloneState(snapshot);
     this.rollbackCount++;

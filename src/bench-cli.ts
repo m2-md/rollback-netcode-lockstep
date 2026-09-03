@@ -1,7 +1,7 @@
-// bench-cli.ts — rollback'in gerçek maliyeti: kare başına kaç kare YENİDEN oynanıyor?
-// Ağ yok, Math.random yok: mesajlar kare numarasıyla teslim edilir, girdi deseni
-// sabit bir betikten gelir. Sayaçlar (rollback, replay, stall) tamamen deterministik;
-// yalnızca ms sütunları makineye göre değişir.
+// bench-cli.ts — real cost of rollback: how many frames are REPLAYED per frame?
+// No network, no Math.random: messages delivered by frame number, input pattern
+// comes from fixed script. Counters (rollback, replay, stall) are fully deterministic;
+// only millisecond columns vary by machine.
 import { RollbackSession, type InputMessage } from "./rollback";
 import { cloneState, createInitialState, hashState, step } from "./sim";
 import { LEFT, RIGHT, UP, DOWN } from "./sim";
@@ -9,7 +9,7 @@ import { LEFT, RIGHT, UP, DOWN } from "./sim";
 type Script = (frame: number) => number;
 
 const FRAMES = 3000;
-const DELAYS = [0, 2, 4, 6, 9, 12, 18]; // tek yön gecikme, kare cinsinden
+const DELAYS = [0, 2, 4, 6, 9, 12, 18]; // one-way delay in frames
 const INPUT_DELAY = 2;
 
 const scripts: [Script, Script] = [
@@ -61,8 +61,8 @@ function measure(delayFrames: number, maxRollback: number): Result {
   }
   const elapsed = performance.now() - start;
 
-  // Ölçüm dışı: telde kalanı boşalt, son geri sarma otursun. Böylece her
-  // gecikme değeri AYNI son duruma varmak zorunda — hash bunu ispatlar.
+  // Drain remaining messages on wire to settle final rollback.
+  // Proves every latency value reaches the exact same final state via hash.
   for (const p of wire) p.to.receive(p.msg);
   a.advance();
   b.advance();
@@ -72,7 +72,7 @@ function measure(delayFrames: number, maxRollback: number): Result {
     rollbacks: a.rollbackCount,
     replayed,
     stalls: a.stallCount,
-    msPerFrame: elapsed / FRAMES / 2, // iki oturum koştu
+    msPerFrame: elapsed / FRAMES / 2, // two sessions ran
     hash: hashState(a.state),
   };
 }
@@ -81,7 +81,7 @@ function benchStateOps(): { save: number; load: number; stepNs: number } {
   const s = createInitialState();
   let sink = 0;
 
-  // Isınma
+  // Warmup
   for (let i = 0; i < 10_000; i++) sink += cloneState(s).frame;
 
   const N = 200_000;
@@ -107,13 +107,13 @@ function benchStateOps(): { save: number; load: number; stepNs: number } {
 const pad = (v: string, w: number): string => v.padStart(w);
 
 console.log(
-  `rollback maliyeti · ${FRAMES} kare · inputDelay=${INPUT_DELAY} · maxRollback=24`,
+  `rollback cost · ${FRAMES} frames · inputDelay=${INPUT_DELAY} · maxRollback=24`,
 );
 console.log(
-  "gecikme (kare) | ~ms | rollback | replay kare | replay/kare | step/kare | stall",
+  "delay (frames) | ~ms | rollback | replay frames | replay/frame | step/frame | stall",
 );
 console.log(
-  "---------------|-----|----------|-------------|-------------|-----------|------",
+  "---------------|-----|----------|---------------|--------------|------------|------",
 );
 
 const results: Result[] = [];
@@ -125,9 +125,9 @@ for (const d of DELAYS) {
       pad(String(r.delayFrames), 14),
       pad((r.delayFrames * (1000 / 60)).toFixed(0), 3),
       pad(String(r.rollbacks), 8),
-      pad(String(r.replayed), 11),
-      pad((r.replayed / FRAMES).toFixed(2), 11),
-      pad((1 + r.replayed / FRAMES).toFixed(2), 9),
+      pad(String(r.replayed), 13),
+      pad((r.replayed / FRAMES).toFixed(2), 12),
+      pad((1 + r.replayed / FRAMES).toFixed(2), 10),
       pad(String(r.stalls), 5),
     ].join(" | "),
   );
@@ -135,7 +135,7 @@ for (const d of DELAYS) {
 
 const allSame = results.every((r) => r.hash === results[0].hash);
 console.log(
-  `\nher gecikmede aynı son durum: ${allSame ? "EVET" : "HAYIR"} ` +
+  `\nidentical final state across all delays: ${allSame ? "YES" : "NO"} ` +
     `(hash ${results[0].hash.toString(16).padStart(8, "0")})`,
 );
 
@@ -146,6 +146,6 @@ console.log(
     `step: ${ops.stepNs.toFixed(1)} ns`,
 );
 console.log(
-  `60 FPS'te kare bütçesi 16.7 ms; en kötü satırın simülasyon maliyeti ` +
+  `Frame budget at 60 FPS is 16.7 ms; worst-case simulation cost ` +
     `${(((1 + results[results.length - 1].replayed / FRAMES) * ops.stepNs + ops.save) / 1e6).toFixed(4)} ms.`,
 );

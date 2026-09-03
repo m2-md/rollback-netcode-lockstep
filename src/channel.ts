@@ -1,4 +1,4 @@
-// channel.ts — tek yönlü, sabit gecikmeli sayfa-içi kanal.
+// channel.ts — unidirectional in-page channel with constant latency.
 export class SimulatedChannel<T> {
   private queue: { deliverAt: number; payload: T }[] = [];
 

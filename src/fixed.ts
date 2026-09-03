@@ -1,5 +1,5 @@
-// fixed.ts — 16.16 sabit noktalı aritmetik.
-// Tüm değerler TAMSAYIDIR: gerçek sayı x, tamsayı olarak x * 65536 tutulur.
+// fixed.ts — 16.16 fixed-point arithmetic.
+// All values are INTEGERS: real number x is stored as integer x * 65536.
 export type Fixed = number;
 
 export const FP_BITS = 16;
@@ -13,10 +13,10 @@ export function toNumber(f: Fixed): number {
   return f / ONE;
 }
 
-// Çarpım: (a*b) / ONE. Bölen ikinin kuvveti olduğu için bölme TAM,
-// trunc ise yuvarlamayı sıfıra doğru sabitler. Aynı sonuç her motorda.
+// Multiplication: (a*b) / ONE. Exact division since divisor is power of two,
+// trunc stabilizes rounding towards zero. Identical result on every engine.
 export function fpMul(a: Fixed, b: Fixed): Fixed {
-  // Sondaki "+ 0" şaka değil: Math.trunc(-0.4) === -0 döner ve -0, 0'a EŞİT DEĞİLDİR.
+  // Trailing "+ 0" prevents negative zero (-0 !== 0).
   return Math.trunc((a * b) / ONE) + 0;
 }
 
@@ -25,7 +25,7 @@ export function fpDiv(a: Fixed, b: Fixed): Fixed {
   return Math.trunc((a * ONE) / b) + 0;
 }
 
-// Tamsayı karekök (Newton). Math.sqrt yok — simülasyonda Math.* kullanmıyoruz.
+// Integer square root (Newton). No Math.sqrt — avoiding Math.* in simulation.
 export function isqrt(n: number): number {
   if (n <= 0) return 0;
   if (n < 4) return 1;
@@ -38,7 +38,7 @@ export function isqrt(n: number): number {
   return x;
 }
 
-// |(x, y)| — girdiler ONE ölçekli, çıktı da ONE ölçekli.
+// |(x, y)| — input is ONE-scaled, output is ONE-scaled.
 export function fpLen(x: Fixed, y: Fixed): Fixed {
   return isqrt(x * x + y * y);
 }

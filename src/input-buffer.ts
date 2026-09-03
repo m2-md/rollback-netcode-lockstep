@@ -1,8 +1,8 @@
-// input-buffer.ts — kare numarasına göre girdi saklayan halka tampon.
+// input-buffer.ts — ring buffer storing inputs by frame number.
 export class InputBuffer {
-  private readonly owner: Int32Array; // slot -> hangi kare
-  private readonly value: Int32Array; // slot -> girdi bitleri
-  private readonly sure: Uint8Array; // slot -> 1: gerçek, 0: tahmin
+  private readonly owner: Int32Array; // slot -> which frame
+  private readonly value: Int32Array; // slot -> input bits
+  private readonly sure: Uint8Array; // slot -> 1: real, 0: predicted
   lastConfirmed = -1;
 
   constructor(private readonly size = 256) {
@@ -35,8 +35,8 @@ export class InputBuffer {
     return this.has(frame) ? this.value[this.slot(frame)] : 0;
   }
 
-  // Tahmin: "oyuncu ne yapıyorsa onu yapmaya devam eder."
-  // Bilinen en son ONAYLI girdiyi tekrarla.
+  // Prediction: "player continues doing what they were doing."
+  // Replays latest known CONFIRMED input.
   predict(frame: number): number {
     const from = Math.min(frame - 1, this.lastConfirmed);
     const floor = Math.max(0, frame - this.size);

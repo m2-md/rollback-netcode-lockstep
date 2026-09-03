@@ -1,88 +1,85 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rollback Netcode &amp; Deterministik Lockstep</title>
+    <meta charset="utf-8" />
+    <title>Deterministic Rollback Netcode vs Lockstep</title>
     <style>
       body {
         margin: 0;
-        padding: 24px;
-        background: #0e1116;
-        color: #d7dde5;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      h1 {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0 0 4px;
-      }
-      p.sub {
-        margin: 0 0 20px;
-        color: #8b97a8;
-        font-size: 13px;
-      }
-      .panels {
+        background: #0f111a;
+        color: #e6e6e6;
+        font-family: system-ui, sans-serif;
         display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
       }
-      .panel h2 {
-        font-size: 13px;
-        font-weight: 500;
-        margin: 0 0 6px;
-        color: #8b97a8;
+      .boards {
+        display: flex;
+        gap: 24px;
+        margin-top: 16px;
+      }
+      .panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
       canvas {
-        background: #171c24;
-        border: 1px solid #2a3240;
-        border-radius: 6px;
-        display: block;
+        background: #1a1c29;
+        border: 2px solid #2e344d;
+        border-radius: 4px;
+      }
+      h2 {
+        font-size: 14px;
+        color: #8f93a2;
+        margin: 8px 0;
+      }
+      #hud {
+        margin-top: 16px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        background: #1a1c29;
+        padding: 12px 16px;
+        border-radius: 4px;
+        min-width: 500px;
+        border: 1px solid #2e344d;
       }
       .controls {
-        margin: 20px 0 12px;
+        margin-top: 12px;
+        display: flex;
+        gap: 16px;
         font-size: 13px;
       }
-      pre#hud {
-        margin: 0;
-        padding: 12px 14px;
-        background: #171c24;
-        border: 1px solid #2a3240;
-        border-radius: 6px;
-        font-size: 13px;
-        line-height: 1.6;
-        display: inline-block;
-        min-width: 420px;
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
     </style>
   </head>
   <body>
-    <h1>İki tahta, tek oyun</h1>
-    <p class="sub">
-      İki istemci aynı sayfada, aralarında 150 ms gecikmeli simüle kanal. Konum
-      paketi yok, sadece girdi.
+    <h1>Two boards, one game</h1>
+    <p>
+      Two clients on the same page with a simulated 150 ms latency channel between them.
+      Position and collision resolution are 100% deterministic (16.16 fixed-point).
     </p>
-
-    <div class="panels">
+    <div class="boards">
       <div class="panel">
-        <h2>P1 — ok tuşları</h2>
-        <canvas id="p1" width="320" height="240"></canvas>
+        <h2>P1 — arrow keys</h2>
+        <canvas id="c1" width="320" height="240"></canvas>
       </div>
       <div class="panel">
-        <h2>P2 — WASD</h2>
-        <canvas id="p2" width="320" height="240"></canvas>
+        <h2>P2 — WASD keys</h2>
+        <canvas id="c2" width="320" height="240"></canvas>
       </div>
     </div>
-
     <div class="controls">
       <label>
-        <input type="checkbox" id="rollback" checked />
-        rollback (tahmin) açık — kapatınca saf lockstep
+        <input type="checkbox" id="predict" checked />
+        rollback (prediction) enabled — disable for pure lockstep
       </label>
     </div>
-
-    <pre id="hud">yükleniyor…</pre>
-
-    <script type="module" src="/src/main.ts"></script>
+    <pre id="hud">loading…</pre>
+    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

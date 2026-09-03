@@ -12,7 +12,7 @@ import {
 } from "../src/sim";
 
 // SimulatedChannel
-it("paketi ancak gecikme dolduktan sonra teslim eder", () => {
+it("delivers packet only after latency expires", () => {
   let clock = 0;
   const ch = new SimulatedChannel<string>(150, () => clock);
   ch.send("a");
@@ -21,10 +21,10 @@ it("paketi ancak gecikme dolduktan sonra teslim eder", () => {
   expect(ch.receive()).toEqual([]);
   clock = 150;
   expect(ch.receive()).toEqual(["a"]);
-  expect(ch.receive()).toEqual([]); // iki kez teslim etmez
+  expect(ch.receive()).toEqual([]); // does not deliver twice
 });
 
-it("gönderim sırasını korur", () => {
+it("preserves send order", () => {
   let clock = 0;
   const ch = new SimulatedChannel<number>(100, () => clock);
   ch.send(1);
@@ -36,7 +36,7 @@ it("gönderim sırasını korur", () => {
   expect(ch.receive()).toEqual([2]);
 });
 
-// main.ts döngüsünün DOM'suz kopyası: enjekte saat, gerçek kanal, gerçek oturumlar.
+// Headless copy of main.ts loop: injected clock, real channel, real sessions.
 function runDemoLoop(ticks: number) {
   const FRAME_MS = 1000 / 60;
   let clock = 0;
@@ -86,8 +86,8 @@ function runDemoLoop(ticks: number) {
   };
 }
 
-// demo döngüsü (150 ms simüle kanal)
-it("onaylı karede iki taraf HER ZAMAN aynı hash'i verir", () => {
+// Demo loop (150 ms simulated channel)
+it("both sides yield the same hash on confirmed frames", () => {
   const r = runDemoLoop(900);
   expect(r.confirmedChecks).toBe(900);
   expect(r.confirmedMismatch).toBe(0);
@@ -96,7 +96,7 @@ it("onaylı karede iki taraf HER ZAMAN aynı hash'i verir", () => {
   expect(r.p1.stallCount).toBe(0);
 });
 
-it("spekülatif kareler ayrışır — senkron kontrolü onaylı karede yapılmalı", () => {
+it("speculative frames diverge — sync check must run on confirmed frames", () => {
   const r = runDemoLoop(900);
   expect(r.speculativeMismatch).toBeGreaterThan(500);
 });
